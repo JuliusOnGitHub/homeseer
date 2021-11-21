@@ -226,6 +226,8 @@ def is_value_sensor(device):
     return False
 
 def is_humidity_sensor(device):
+    if device.device_type_string is None:
+        return False
     if device.device_type_string == DEVICE_ZWAVE_RELATIVE_HUMIDITY:
         return True
     lower = device.device_type_string.lower()
@@ -236,6 +238,8 @@ def is_humidity_sensor(device):
     return False
 
 def is_battery_sensor(device):
+    if device.device_type_string is None:
+        return False
     if device.device_type_string == DEVICE_ZWAVE_BATTERY:
         return True
     lower = device.device_type_string.lower()
@@ -249,7 +253,7 @@ def get_sensor_entity(device, connection):
     """Return the proper sensor object based on device type."""
     if is_battery_sensor(device):
         return HomeSeerBatterySensor(device, connection)
-    elif is_humidity_sensor(device.device_type_string):
+    elif is_humidity_sensor(device):
         return HomeSeerHumiditySensor(device, connection)
     elif device.device_type_string == DEVICE_ZWAVE_FAN_STATE:
         return HomeSeerFanStateSensor(device, connection)
