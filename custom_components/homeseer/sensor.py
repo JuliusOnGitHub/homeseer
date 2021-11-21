@@ -208,12 +208,49 @@ class HomeSeerDoorLockLoggingSensor(HomeSeerStatusSensor):
         """Return an appropriate lock icon."""
         return "mdi:lock-clock"
 
+def is_numeric(device):
+    if type(device.value) == int or type(device.value) == float:
+        return True
+    return False
+
+def is_value_sensor(device):
+    if device.device_type_string is None:
+        return False
+    if device.device_type_string in GENERIC_VALUE_SENSOR_TYPES:
+        return True
+    lower = device.device_type_string.lower()
+    if is_numeric(device):
+        if lower.endswith("temperature sensor"):
+            return True
+        if lower.endswith("humidity sensor"):
+            return True
+    return False
+
+def is_humidity_sensor(device):
+    if device.device_type_string == DEVICE_ZWAVE_RELATIVE_HUMIDITY:
+        return True
+    lower = device.device_type_string.lower()
+    if is_numeric(device):
+        if lower.endswith("humidity sensor"):
+            return True
+        return False
+    return False
+
+def is_battery_sensor(device):
+    if device.device_type_string == DEVICE_ZWAVE_BATTERY:
+        return True
+    lower = device.device_type_string.lower()
+    if is_numeric(device):
+        if lower.endswith("battery status"):
+            return True
+        return False
+    return False
 
 def get_sensor_entity(device, connection):
     """Return the proper sensor object based on device type."""
-    if device.device_type_string == DEVICE_ZWAVE_BATTERY:
+    if is_battery_sensor(device):
         return HomeSeerBatterySensor(device, connection)
-    elif device.device_type_string == DEVICE_ZWAVE_RELATIVE_HUMIDITY:
+    elif is_humidity_sensor(device.device_type_string):
         return HomeSeerHumiditySensor(device, connection)
     elif device.device_type_string == DEVICE_ZWAVE_FAN_STATE:
         return HomeSeerFanStateSensor(device, connection)
@@ -224,13 +261,3 @@ def get_sensor_entity(device, connection):
     elif is_value_sensor(device):
         return HomeSeerValueSensor(device, connection)
     return HomeSeerStatusSensor(device, connection)
-
-def is_value_sensor(device):
-    if device.device_type_string is None:
-        return False
-    if device.device_type_string in GENERIC_VALUE_SENSOR_TYPES:
-        return True
-    lower = device.device_type_string.lower()
-    if lower.endswith(" temperature sensor"):
-        return True
-    return False
