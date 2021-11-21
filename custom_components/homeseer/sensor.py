@@ -226,10 +226,11 @@ def get_sensor_entity(device, connection):
     return HomeSeerStatusSensor(device, connection)
 
 def is_value_sensor(device):
+    if device.device_type_string is None:
+        return False
     if device.device_type_string in GENERIC_VALUE_SENSOR_TYPES:
         return True
     lower = device.device_type_string.lower()
     if lower.endswith(" temperature sensor"):
         return True
-
     return False
