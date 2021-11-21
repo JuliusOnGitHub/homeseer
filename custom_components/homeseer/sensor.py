@@ -222,8 +222,7 @@ def is_value_sensor(device):
     if is_numeric(device):
         if lower.endswith("temperature sensor"):
             return True
-        if lower.endswith("humidity sensor"):
-            return True
+        return False
     return False
 
 def is_humidity_sensor(device):
