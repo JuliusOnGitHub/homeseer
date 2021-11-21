@@ -57,7 +57,6 @@ GENERIC_VALUE_SENSOR_TYPES = [
     DEVICE_ZWAVE_TEMPERATURE, 
     DEVICE_ZWAVE_LUMINANCE,
     DEVICE_ZWAVE_SENSOR_MULTILEVEL,
-    "FineOffset,Viking 02038,TSS320,Proove311501 Temperature Sensor",
 ]
 
 
@@ -222,6 +221,15 @@ def get_sensor_entity(device, connection):
         return HomeSeerOperatingStateSensor(device, connection)
     elif device.device_type_string == DEVICE_ZWAVE_DOOR_LOCK_LOGGING:
         return HomeSeerDoorLockLoggingSensor(device, connection)
-    elif device.device_type_string in GENERIC_VALUE_SENSOR_TYPES:
+    elif is_value_sensor(device):
         return HomeSeerValueSensor(device, connection)
     return HomeSeerStatusSensor(device, connection)
+
+def is_value_sensor(device):
+    if device.device_type_string in GENERIC_VALUE_SENSOR_TYPES:
+        return True
+    lower = device.device_type_string.lower()
+    if lower.endswith(" temperature sensor"):
+        return True
+
+    return False
