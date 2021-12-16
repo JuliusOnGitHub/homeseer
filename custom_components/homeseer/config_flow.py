@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from libhomeseer import (
+from .libhomeseer import (
     HomeSeer,
     HomeSeerSwitchableDevice,
     DEFAULT_USERNAME,

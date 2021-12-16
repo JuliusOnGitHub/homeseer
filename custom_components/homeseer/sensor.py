@@ -1,7 +1,7 @@
 """Support for HomeSeer sensor-type devices."""
 
 import logging
-from libhomeseer import (
+from .libhomeseer import (
     DEVICE_ZWAVE_BATTERY,
     DEVICE_ZWAVE_DOOR_LOCK_LOGGING,
     DEVICE_ZWAVE_ELECTRIC_METER,

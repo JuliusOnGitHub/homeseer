@@ -1,6 +1,5 @@
 """Provides HomeSeer specific implementations for bridges, entities, and remotes."""
-
-from libhomeseer import (
+from .libhomeseer import (
     HomeSeer,
     HomeSeerStatusDevice,
     HomeSeerSwitchableDevice,
