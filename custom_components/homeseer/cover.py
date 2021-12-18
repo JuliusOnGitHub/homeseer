@@ -106,7 +106,7 @@ class HomeSeerBlind(HomeSeerCover):
     @property
     def is_closed(self):
         """Return if the cover is closed or not."""
-        return not self._device.is_on
+        return self._device.is_on
 
     async def async_set_cover_position(self, **kwargs):
         await self._device.dim(kwargs.get(ATTR_POSITION, 0))
