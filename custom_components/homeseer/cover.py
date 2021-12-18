@@ -102,7 +102,7 @@ class HomeSeerBlind(HomeSeerCover):
     def current_cover_position(self):
         if self._device.dim_supported:
             """Return the current position of the cover."""
-            return int(self._device.dim_percent * 100)
+            return self._device.dim_percent
         return None
 
     @property

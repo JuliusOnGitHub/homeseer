@@ -199,7 +199,7 @@ class HomeSeerDimmableDevice(HomeSeerSwitchableDevice):
         return self._dim_end_value - self._dim_start_value
 
     @property
-    def dim_percent(self) -> float:
+    def dim_percent(self) -> int:
         """Returns a number from 0 to 1 representing the current dim percentage."""
         if self.value == self._on_value:
             return 100
@@ -208,7 +208,7 @@ class HomeSeerDimmableDevice(HomeSeerSwitchableDevice):
         if not self.dim_supported:
             return 0
         
-        return (self.value - self._dim_start_value) / self.dim_range
+        return 100 * (self.value - self._dim_start_value) / self.dim_range
 
     async def dim(self, percent: int) -> None:
         if not self.dim_supported:
