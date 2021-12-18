@@ -8,11 +8,13 @@ from .const import RELATIONSHIP_CHILD, RELATIONSHIP_ROOT, RELATIONSHIP_STANDALON
 CONTROL_USE_ON = 1
 CONTROL_USE_OFF = 2
 CONTROL_USE_DIM = 3
+CONTROL_USE_STOP = 7
 CONTROL_USE_LOCK = 18
 CONTROL_USE_UNLOCK = 19
 CONTROL_USE_FAN = 23
 CONTROL_LABEL_LOCK = "Lock"
 CONTROL_LABEL_UNLOCK = "Unlock"
+SUPPORT_STOP = 64
 
 SUPPORT_STATUS = 0
 SUPPORT_ON = 1
@@ -181,22 +183,60 @@ class HomeSeerSwitchableDevice(HomeSeerStatusDevice):
 class HomeSeerDimmableDevice(HomeSeerSwitchableDevice):
     """Representation of a HomeSeer device that has a Dim control pair."""
 
+    def __init__(
+        self, raw_data: dict, request: Callable, on_value: int, off_value: int, dim_start_value:int, dim_end_value:int
+    ) -> None:
+        super().__init__(raw_data, request, on_value, off_value)
+        self._dim_start_value = dim_start_value
+        self._dim_end_value = dim_end_value
+
+    @property
+    def dim_supported(self) -> bool:
+        return self._dim_start_value != self._dim_end_value
+
+    @property
+    def dim_range(self) -> int:
+        return self._dim_end_value - self._dim_start_value
+
     @property
     def dim_percent(self) -> float:
         """Returns a number from 0 to 1 representing the current dim percentage."""
-        return self.value / self._on_value
+        if self.value == self._on_value:
+            return 100
+        if self.value == self._off_value:
+            return 0
+        if not self.dim_supported:
+            return 0
+        
+        return (self.value - self._dim_start_value) / self.dim_range
 
     async def dim(self, percent: int) -> None:
+        if not self.dim_supported:
+            return
+
         """Dim the device on a scale from 0 to 100."""
         if percent < 0 or percent > 100:
             raise ValueError("Percent must be an integer from 0 to 100")
 
-        value = int(self._on_value * (percent / 100))
+        step = (self.dim_range) / 100
+        value = int(step * percent) + self._dim_start_value
 
         params = {"request": "controldevicebyvalue", "ref": self.ref, "value": value}
 
         await self._request("get", params=params)
 
+class HomeSeerCoverDevice(HomeSeerDimmableDevice):
+    """Representation of a HomeSeer cover that has a Stop and/or Dim control pair."""
+
+    def __init__(
+        self, raw_data: dict, request: Callable, on_value: int, off_value: int, stop_value: int, dim_start_value:int = 0, dim_end_value:int = 0
+    ) -> None:
+        super().__init__(raw_data, request, on_value, off_value, dim_start_value, dim_end_value)
+        self._stop_value = stop_value
+
+    async def stop(self) -> None:
+        params = {"request": "controldevicebyvalue", "ref": self.ref, "value": self._stop_value}
+        await self._request("get", params=params)
 
 class HomeSeerFanDevice(HomeSeerSwitchableDevice):
     """Representation of a HomeSeer device that has a Fan or DimFan control pair."""
@@ -263,6 +303,7 @@ def get_device(
         HomeSeerLockableDevice,
         HomeSeerStatusDevice,
         HomeSeerSwitchableDevice,
+        HomeSeerCoverDevice,
     ]
 ]:
     """
@@ -276,6 +317,10 @@ def get_device(
     """
     on_value = None
     off_value = None
+    dim_range = None
+    dim_start_value = None
+    dim_end_value = None
+    stop_value = None
     lock_value = None
     unlock_value = None
     control_pairs = None
@@ -292,6 +337,9 @@ def get_device(
                 elif control_use == CONTROL_USE_OFF:
                     off_value = pair["ControlValue"]
                     supported_features |= SUPPORT_OFF
+                elif control_use == CONTROL_USE_STOP:
+                    stop_value = pair["ControlValue"]
+                    supported_features |= SUPPORT_STOP
                 elif (
                     control_use == CONTROL_USE_LOCK
                     or control_label == CONTROL_LABEL_LOCK
@@ -305,7 +353,11 @@ def get_device(
                     unlock_value = pair["ControlValue"]
                     supported_features |= SUPPORT_UNLOCK
                 elif control_use == CONTROL_USE_DIM:
+                    dim_range = pair["Range"]
+                    dim_start_value = dim_range["RangeStart"]
+                    dim_end_value = dim_range["RangeEnd"]
                     supported_features |= SUPPORT_DIM
+
                 elif control_use == CONTROL_USE_FAN:
                     supported_features |= SUPPORT_FAN
             break
@@ -317,7 +369,17 @@ def get_device(
 
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_DIM:
         return HomeSeerDimmableDevice(
-            raw_data, request, on_value=on_value, off_value=off_value
+            raw_data, request, on_value=on_value, off_value=off_value, dim_start_value=dim_start_value, dim_end_value=dim_end_value
+        )
+
+    elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_DIM | SUPPORT_STOP:
+        return HomeSeerCoverDevice(
+            raw_data, request, on_value, off_value, stop_value, dim_start_value, dim_end_value
+        )
+
+    elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_STOP:
+        return HomeSeerCoverDevice(
+            raw_data, request, on_value=on_value, off_value=off_value, stop_value=stop_value
         )
 
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_FAN:

@@ -107,9 +107,9 @@ class HomeSeer:
                 )
                 return await result.json()
 
-        except ContentTypeError:
+        except ContentTypeError as cte:
             _LOGGER.debug(
-                f"HomeSeer returned non-JSON response from {self._host}: {await result.text()}"
+                f"HomeSeer returned non-JSON response from {self._host}: {cte}"
             )
 
         except TimeoutError:
@@ -133,9 +133,12 @@ class HomeSeer:
             control_data = result["Devices"]
 
             for device in all_devices:
-                dev = get_device(device, control_data, self._request)
-                if dev is not None:
-                    self._devices[dev.ref] = dev
+                try:
+                    dev = get_device(device, control_data, self._request)
+                    if dev is not None:
+                        self._devices[dev.ref] = dev
+                except Exception as e:
+                    _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}: {e}")
 
         except TypeError:
             _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}")

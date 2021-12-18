@@ -9,6 +9,7 @@ from homeassistant.components.cover import (
     DEVICE_CLASS_GARAGE,
     SUPPORT_CLOSE,
     SUPPORT_OPEN,
+    SUPPORT_STOP,
     SUPPORT_SET_POSITION,
 )
 
@@ -52,7 +53,6 @@ class HomeSeerCover(HomeSeerEntity, CoverEntity):
     async def async_close_cover(self, **kwargs):
         await self._device.off()
 
-
 class HomeSeerGarageDoor(HomeSeerCover):
     """Representation of a garage door opener device."""
 
@@ -88,7 +88,10 @@ class HomeSeerBlind(HomeSeerCover):
     @property
     def supported_features(self):
         """Return the features supported by the device."""
-        return SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
+        if self._device.dim_supported:
+            return SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION | SUPPORT_STOP
+        else: 
+            return SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_STOP
 
     @property
     def device_class(self):
@@ -107,3 +110,6 @@ class HomeSeerBlind(HomeSeerCover):
 
     async def async_set_cover_position(self, **kwargs):
         await self._device.dim(kwargs.get(ATTR_POSITION, 0))
+    
+    async def async_stop(self, **kwarg):
+        await self._device.stop()

@@ -5,6 +5,7 @@ from .libhomeseer import (
     HomeSeerSwitchableDevice,
     HomeSeerLockableDevice,
     HomeSeerDimmableDevice,
+    HomeSeerCoverDevice,
     get_datetime_from_last_change,
     RELATIONSHIP_CHILD,
     RELATIONSHIP_ROOT,
@@ -192,6 +193,8 @@ class HomeSeerBridge:
             return "switch"
         elif type(device) == HomeSeerDimmableDevice:
             return "light"
+        elif type(device) == HomeSeerCoverDevice:
+            return "cover"
         elif type(device) == HomeSeerLockableDevice:
             return "lock"
         elif type(device) == HomeSeerStatusDevice:
@@ -213,6 +216,7 @@ class HomeSeerEntity(Entity):
             HomeSeerSwitchableDevice,
             HomeSeerDimmableDevice,
             HomeSeerLockableDevice,
+            HomeSeerCoverDevice
         ],
         bridge: HomeSeerBridge,
     ):
