@@ -157,7 +157,7 @@ class HomeSeerSwitchableDevice(HomeSeerStatusDevice):
     @property
     def is_on(self) -> bool:
         """Return True if the device's current value is greater than its off value."""
-        return self.value > self._off_value
+        return self.value != self._off_value
 
     async def on(self) -> None:
         """Turn the device on."""
