@@ -103,6 +103,10 @@ class HomeSeerBlind(HomeSeerCover):
         """Return the current position of the cover."""
         return int(self._device.dim_percent * 100)
 
+    @property
+    def is_closed(self):
+        return None
+
     async def async_set_cover_position(self, **kwargs):
         await self._device.dim(kwargs.get(ATTR_POSITION, 0))
     
