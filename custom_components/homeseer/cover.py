@@ -48,10 +48,10 @@ class HomeSeerCover(HomeSeerEntity, CoverEntity):
     """Base representation for a HomeSeer cover entity."""
 
     async def async_open_cover(self, **kwargs):
-        await self._device.on()
+        await self._device.off()
 
     async def async_close_cover(self, **kwargs):
-        await self._device.off()
+        await self._device.on()
 
 class HomeSeerGarageDoor(HomeSeerCover):
     """Representation of a garage door opener device."""
@@ -111,5 +111,5 @@ class HomeSeerBlind(HomeSeerCover):
     async def async_set_cover_position(self, **kwargs):
         await self._device.dim(kwargs.get(ATTR_POSITION, 0))
     
-    async def async_stop(self, **kwarg):
+    async def async_stop_cover(self, **kwargs):
         await self._device.stop()
