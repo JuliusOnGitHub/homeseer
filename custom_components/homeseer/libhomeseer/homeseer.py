@@ -143,10 +143,12 @@ class HomeSeer:
                         self._devices[dev.ref] = dev
                 except Exception as e:
                     _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}: {e}")
+
+            self.find_thermostats()
+
         except Exception as e:
             _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}: {e}")
         
-        #self.find_thermostats()
 
     def find_thermostats(self) -> None:
         devices = list(self._devices.values())

@@ -320,7 +320,7 @@ def get_device(
     Lock/Unlock = HomeSeerLockableDevice
     other = HomeSeerStatusDevice
     """
-    item = next((x for x in control_data if raw_data["ref"]), [None])
+    item = next((x for x in control_data if x["ref"] == raw_data["ref"]), None)
     supported_features = get_supported_features(item)
     return build_device(raw_data, item, request, supported_features)
 
@@ -337,19 +337,14 @@ def build_device(raw_data: dict, item: dict, request: Callable, supported_featur
 ]:
     if supported_features == SUPPORT_ON | SUPPORT_OFF:
         return build_switch_device(raw_data, item, request)
-
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_DIM:
         return build_dimmable_device(raw_data, item, request)
-
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_DIM | SUPPORT_STOP:
         return build_cover_device(raw_data, item, request)
-
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_STOP:
         return build_cover_device(raw_data, item, request)
-
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_FAN:
         return build_fan_device(raw_data, item, request)
-
     elif supported_features == SUPPORT_LOCK | SUPPORT_UNLOCK:
         return build_lockable_device(raw_data, item, request)
     elif supported_features == SUPPORT_SETPOINT:
@@ -367,7 +362,11 @@ def build_device(raw_data: dict, item: dict, request: Callable, supported_featur
 
 def get_supported_features(control_item: dict) -> int:
     supported_features = SUPPORT_STATUS
+    if control_item is None:
+        return supported_features
     control_pairs = control_item["ControlPairs"]
+    if control_pairs is None:
+        return supported_features
     for pair in control_pairs:
         control_use = pair["ControlUse"]
         if control_use == CONTROL_USE_ON:
@@ -454,13 +453,13 @@ def get_thermostat(thermostat: HomeSeerStatusDevice, devices: List[HomeSeerStatu
     children_ids = thermostat._raw_data["associated_devices"]
     children = [dev for dev in devices if dev.ref in children_ids]
 
-    mode = next((x for x in children if x.device_type_string == "Z-Wave Mode"), [None])
-    heater = next((x for x in children if x.device_type_string == "Z-Wave Switch"), [None])
-    heating_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Heating  Setpoint"), [None])
-    cooling_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Cooling  Setpoint"), [None])
-    energy_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Energy Save Heating Setpoint"), [None])
-    air_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Thermostat Air Temperature"), [None])
-    floor_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Floor Temperature"), [None])
+    mode = next((x for x in children if x.device_type_string == "Z-Wave Mode"), None)
+    heater = next((x for x in children if x.device_type_string == "Z-Wave Switch"), None)
+    heating_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Heating  Setpoint"), None)
+    cooling_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Cooling  Setpoint"), None)
+    energy_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Energy Save Heating Setpoint"), None)
+    air_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Thermostat Air Temperature"), None)
+    floor_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Floor Temperature"), None)
 
     return None
 
