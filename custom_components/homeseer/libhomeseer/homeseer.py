@@ -13,7 +13,11 @@ from .const import (
     DEFAULT_PASSWORD,
     DEFAULT_USERNAME,
 )
-from .devices import get_device
+from .devices import (
+    HomeSeerStatusDevice,
+    get_device,
+    get_thermostat
+)
 from .events import HomeSeerEvent
 from .listener import Listener
 
@@ -139,9 +143,22 @@ class HomeSeer:
                         self._devices[dev.ref] = dev
                 except Exception as e:
                     _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}: {e}")
+        except Exception as e:
+            _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}: {e}")
+        
+        #self.find_thermostats()
 
-        except TypeError:
-            _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}")
+    def find_thermostats(self) -> None:
+        devices = list(self._devices.values())
+        status_devices = [dev for dev in devices if isinstance(dev, HomeSeerStatusDevice)]
+        thermostat_roots = [dev for dev in status_devices if dev.device_type_string == "Z-Wave Thermostat Root Device"]
+        for thermostat in thermostat_roots:
+            try:
+                dev = get_thermostat(thermostat, status_devices)
+                if dev is not None:
+                    self._thermostats[dev.ref] = dev
+            except Exception as e:
+                _LOGGER.error(f"Error creating thermostat {thermostat}: {e}")
 
     async def _get_events(self) -> None:
         """Populate supported events from HomeSeer API."""

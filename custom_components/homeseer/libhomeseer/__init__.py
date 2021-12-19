@@ -5,7 +5,8 @@ from .devices import (
     HomeSeerDimmableDevice,
     HomeSeerLockableDevice,
     HomeSeerCoverDevice,
-    HomeSeerFanDevice
+    HomeSeerFanDevice,
+    HomeSeerSetPointDevice
 )
 from .helpers import *
 from .homeseer import HomeSeer

@@ -1,7 +1,8 @@
 """Representations of API data for HomeSeer devices as Python objects."""
 
 import logging
-from typing import Callable, Optional, Union
+from sys import modules
+from typing import Callable, List, Optional, Tuple, Union
 
 from .const import RELATIONSHIP_CHILD, RELATIONSHIP_ROOT, RELATIONSHIP_STANDALONE
 
@@ -9,12 +10,16 @@ CONTROL_USE_ON = 1
 CONTROL_USE_OFF = 2
 CONTROL_USE_DIM = 3
 CONTROL_USE_STOP = 7
+CONTROL_USE_HEAT_SETPOINT = 12
+CONTROL_USE_COOL_SETPOINT = 13
+CONTROL_USE_THERM_MODE_OFF = 14
+CONTROL_USE_THERM_MODE_HEAT = 15
+CONTROL_USE_THERM_MODE_COOL = 16
 CONTROL_USE_LOCK = 18
 CONTROL_USE_UNLOCK = 19
 CONTROL_USE_FAN = 23
 CONTROL_LABEL_LOCK = "Lock"
 CONTROL_LABEL_UNLOCK = "Unlock"
-SUPPORT_STOP = 64
 
 SUPPORT_STATUS = 0
 SUPPORT_ON = 1
@@ -23,6 +28,9 @@ SUPPORT_LOCK = 4
 SUPPORT_UNLOCK = 8
 SUPPORT_DIM = 16
 SUPPORT_FAN = 32
+SUPPORT_STOP = 64
+SUPPORT_SETPOINT = 128
+SUPPORT_THERM_MODES = 512
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,8 +41,9 @@ class HomeSeerStatusDevice:
     Base representation for all other HomeSeer device objects.
     """
 
-    def __init__(self, raw_data: dict, request: Callable) -> None:
+    def __init__(self, raw_data: dict, control_data: dict, request: Callable) -> None:
         self._raw_data = raw_data
+        self._control_data = control_data
         self._request = request
         self._update_callback = None
         self._suppress_update_callback = False
@@ -143,14 +152,35 @@ class HomeSeerStatusDevice:
         if self._update_callback is not None:
             self._update_callback()
 
+    def get_params(self, value) -> dict:
+        params = {"request": "controldevicebyvalue", "ref": self.ref, "value": value}
+        return params
+
+    async def set_value(self, value) -> None:
+        params = self.get_params(value)
+        await self._request("get", params=params)
+
+class HomeSeerSetPointDevice(HomeSeerStatusDevice):
+    """Representation of a HomeSeer device that has a set point control pairs."""
+
+    def __init__(
+        self, raw_data: dict, control_data: dict, request: Callable, set_min:float,set_max:float
+    ) -> None:
+        super().__init__(raw_data, control_data, request)
+        self._set_min = set_min
+        self._set_max = set_max
+
+    async def set_setpoint(self, value: float) -> None:
+        if self._set_min <= value and value <= self._set_max:
+            await self.set_value(value)
 
 class HomeSeerSwitchableDevice(HomeSeerStatusDevice):
     """Representation of a HomeSeer device that has On and Off control pairs."""
 
     def __init__(
-        self, raw_data: dict, request: Callable, on_value: int, off_value: int
+        self, raw_data: dict, control_data: dict, request: Callable, on_value: int, off_value: int
     ) -> None:
-        super().__init__(raw_data, request)
+        super().__init__(raw_data, control_data, request)
         self._on_value = on_value
         self._off_value = off_value
 
@@ -161,32 +191,19 @@ class HomeSeerSwitchableDevice(HomeSeerStatusDevice):
 
     async def on(self) -> None:
         """Turn the device on."""
-        params = {
-            "request": "controldevicebyvalue",
-            "ref": self.ref,
-            "value": self._on_value,
-        }
-
-        await self._request("get", params=params)
+        await self.set_value(self._on_value)
 
     async def off(self) -> None:
         """Turn the device off."""
-        params = {
-            "request": "controldevicebyvalue",
-            "ref": self.ref,
-            "value": self._off_value,
-        }
-
-        await self._request("get", params=params)
-
+        await self.set_value(self._off_value)
 
 class HomeSeerDimmableDevice(HomeSeerSwitchableDevice):
     """Representation of a HomeSeer device that has a Dim control pair."""
 
     def __init__(
-        self, raw_data: dict, request: Callable, on_value: int, off_value: int, dim_start_value:int, dim_end_value:int
+        self, raw_data: dict, control_data: dict, request: Callable, on_value: int, off_value: int, dim_start_value:int, dim_end_value:int
     ) -> None:
-        super().__init__(raw_data, request, on_value, off_value)
+        super().__init__(raw_data, control_data, request, on_value, off_value)
         self._dim_start_value = dim_start_value
         self._dim_end_value = dim_end_value
 
@@ -220,23 +237,19 @@ class HomeSeerDimmableDevice(HomeSeerSwitchableDevice):
 
         step = (self.dim_range) / 100
         value = int(step * percent) + self._dim_start_value
-
-        params = {"request": "controldevicebyvalue", "ref": self.ref, "value": value}
-
-        await self._request("get", params=params)
+        await self.set_value(value)
 
 class HomeSeerCoverDevice(HomeSeerDimmableDevice):
     """Representation of a HomeSeer cover that has a Stop and/or Dim control pair."""
 
     def __init__(
-        self, raw_data: dict, request: Callable, on_value: int, off_value: int, stop_value: int, dim_start_value:int = 0, dim_end_value:int = 0
+        self, raw_data: dict, control_data: dict, request: Callable, on_value: int, off_value: int, stop_value: int, dim_start_value:int = 0, dim_end_value:int = 0
     ) -> None:
-        super().__init__(raw_data, request, on_value, off_value, dim_start_value, dim_end_value)
+        super().__init__(raw_data, control_data, request, on_value, off_value, dim_start_value, dim_end_value)
         self._stop_value = stop_value
 
     async def stop(self) -> None:
-        params = {"request": "controldevicebyvalue", "ref": self.ref, "value": self._stop_value}
-        await self._request("get", params=params)
+        await self.set_value(self._stop_value)
 
 class HomeSeerFanDevice(HomeSeerSwitchableDevice):
     """Representation of a HomeSeer device that has a Fan or DimFan control pair."""
@@ -252,19 +265,15 @@ class HomeSeerFanDevice(HomeSeerSwitchableDevice):
             raise ValueError("Percent must be an integer from 0 to 100")
 
         value = int(self._on_value * (percent / 100))
-
-        params = {"request": "controldevicebyvalue", "ref": self.ref, "value": value}
-
-        await self._request("get", params=params)
-
+        await self.set_value(value)
 
 class HomeSeerLockableDevice(HomeSeerStatusDevice):
     """Representation of a HomeSeer device that has Lock and Unlock control pairs."""
 
     def __init__(
-        self, raw_data: dict, request: Callable, lock_value: int, unlock_value: int
+        self, raw_data: dict, control_data: dict, request: Callable, lock_value: int, unlock_value: int
     ) -> None:
-        super().__init__(raw_data, request)
+        super().__init__(raw_data, control_data, request)
         self._lock_value = lock_value
         self._unlock_value = unlock_value
 
@@ -275,24 +284,19 @@ class HomeSeerLockableDevice(HomeSeerStatusDevice):
 
     async def lock(self) -> None:
         """Lock the device."""
-        params = {
-            "request": "controldevicebyvalue",
-            "ref": self.ref,
-            "value": self._lock_value,
-        }
-
-        await self._request("get", params=params)
+        await self.set_value(self._lock_value)
 
     async def unlock(self) -> None:
         """Unlock the device."""
-        params = {
-            "request": "controldevicebyvalue",
-            "ref": self.ref,
-            "value": self._unlock_value,
-        }
+        await self.set_value(self._unlock_value)
 
-        await self._request("get", params=params)
+class HomeSeerClimateDevice(HomeSeerSwitchableDevice):
+    """Representation of a HomeSeer device that has Lock and Unlock control pairs."""
 
+    def __init__(
+        self, raw_data: dict, control_data: dict, request: Callable, on_value: int, off_value: int
+    ) -> None:
+        super().__init__(raw_data, control_data, request, on_value, off_value)
 
 def get_device(
     raw_data: dict, control_data: dict, request: Callable
@@ -304,6 +308,7 @@ def get_device(
         HomeSeerStatusDevice,
         HomeSeerSwitchableDevice,
         HomeSeerCoverDevice,
+        HomeSeerSetPointDevice
     ]
 ]:
     """
@@ -315,83 +320,40 @@ def get_device(
     Lock/Unlock = HomeSeerLockableDevice
     other = HomeSeerStatusDevice
     """
-    on_value = None
-    off_value = None
-    dim_range = None
-    dim_start_value = None
-    dim_end_value = None
-    stop_value = None
-    lock_value = None
-    unlock_value = None
-    control_pairs = None
-    supported_features = SUPPORT_STATUS
-    for item in control_data:
-        if item["ref"] == raw_data["ref"]:
-            control_pairs = item["ControlPairs"]
-            for pair in control_pairs:
-                control_use = pair["ControlUse"]
-                control_label = pair["Label"]
-                if control_use == CONTROL_USE_ON:
-                    on_value = pair["ControlValue"]
-                    supported_features |= SUPPORT_ON
-                elif control_use == CONTROL_USE_OFF:
-                    off_value = pair["ControlValue"]
-                    supported_features |= SUPPORT_OFF
-                elif control_use == CONTROL_USE_STOP:
-                    stop_value = pair["ControlValue"]
-                    supported_features |= SUPPORT_STOP
-                elif (
-                    control_use == CONTROL_USE_LOCK
-                    or control_label == CONTROL_LABEL_LOCK
-                ):
-                    lock_value = pair["ControlValue"]
-                    supported_features |= SUPPORT_LOCK
-                elif (
-                    control_use == CONTROL_USE_UNLOCK
-                    or control_label == CONTROL_LABEL_UNLOCK
-                ):
-                    unlock_value = pair["ControlValue"]
-                    supported_features |= SUPPORT_UNLOCK
-                elif control_use == CONTROL_USE_DIM:
-                    dim_range = pair["Range"]
-                    dim_start_value = dim_range["RangeStart"]
-                    dim_end_value = dim_range["RangeEnd"]
-                    supported_features |= SUPPORT_DIM
+    item = next((x for x in control_data if raw_data["ref"]), [None])
+    supported_features = get_supported_features(item)
+    return build_device(raw_data, item, request, supported_features)
 
-                elif control_use == CONTROL_USE_FAN:
-                    supported_features |= SUPPORT_FAN
-            break
-
+def build_device(raw_data: dict, item: dict, request: Callable, supported_features: int) -> Optional[
+    Union[
+        HomeSeerDimmableDevice,
+        HomeSeerFanDevice,
+        HomeSeerLockableDevice,
+        HomeSeerStatusDevice,
+        HomeSeerSwitchableDevice,
+        HomeSeerCoverDevice,
+        HomeSeerSetPointDevice
+    ]
+]:
     if supported_features == SUPPORT_ON | SUPPORT_OFF:
-        return HomeSeerSwitchableDevice(
-            raw_data, request, on_value=on_value, off_value=off_value
-        )
+        return build_switch_device(raw_data, item, request)
 
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_DIM:
-        return HomeSeerDimmableDevice(
-            raw_data, request, on_value=on_value, off_value=off_value, dim_start_value=dim_start_value, dim_end_value=dim_end_value
-        )
+        return build_dimmable_device(raw_data, item, request)
 
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_DIM | SUPPORT_STOP:
-        return HomeSeerCoverDevice(
-            raw_data, request, on_value, off_value, stop_value, dim_start_value, dim_end_value
-        )
+        return build_cover_device(raw_data, item, request)
 
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_STOP:
-        return HomeSeerCoverDevice(
-            raw_data, request, on_value=on_value, off_value=off_value, stop_value=stop_value
-        )
+        return build_cover_device(raw_data, item, request)
 
     elif supported_features == SUPPORT_ON | SUPPORT_OFF | SUPPORT_FAN:
-        return HomeSeerFanDevice(
-            raw_data, request, on_value=on_value, off_value=off_value
-        )
+        return build_fan_device(raw_data, item, request)
 
     elif supported_features == SUPPORT_LOCK | SUPPORT_UNLOCK:
-        return HomeSeerLockableDevice(
-            raw_data, request, lock_value=lock_value, unlock_value=unlock_value
-        )
-
+        return build_lockable_device(raw_data, item, request)
+    elif supported_features == SUPPORT_SETPOINT:
+        return build_setpoint_device(raw_data, item, request)
     else:
         _LOGGER.debug(
             f"Failed to automatically detect device Control Pairs for device ref {raw_data['ref']}; "
@@ -399,6 +361,107 @@ def get_device(
             f"If this device has controls, open an issue on the libhomeseer repo "
             f"with the following information to request support for this device: "
             f"RAW: ({raw_data}) "
-            f"CONTROL: ({control_pairs})."
+            f"CONTROL: ({item})."
         )
-        return HomeSeerStatusDevice(raw_data, request)
+        return HomeSeerStatusDevice(raw_data, item, request)
+
+def get_supported_features(control_item: dict) -> int:
+    supported_features = SUPPORT_STATUS
+    control_pairs = control_item["ControlPairs"]
+    for pair in control_pairs:
+        control_use = pair["ControlUse"]
+        if control_use == CONTROL_USE_ON:
+            supported_features |= SUPPORT_ON
+        elif control_use == CONTROL_USE_OFF:
+            supported_features |= SUPPORT_OFF
+        elif control_use == CONTROL_USE_STOP:
+            supported_features |= SUPPORT_STOP
+        elif (control_use == CONTROL_USE_LOCK):
+            supported_features |= SUPPORT_LOCK
+        elif (control_use == CONTROL_USE_UNLOCK):
+            supported_features |= SUPPORT_UNLOCK
+        elif control_use == CONTROL_USE_DIM:
+            supported_features |= SUPPORT_DIM
+        elif control_use == CONTROL_USE_FAN:
+            supported_features |= SUPPORT_FAN
+        elif control_use == CONTROL_USE_COOL_SETPOINT or control_use == CONTROL_USE_HEAT_SETPOINT:
+            supported_features |= SUPPORT_SETPOINT
+        elif control_use == CONTROL_USE_THERM_MODE_COOL or control_use == CONTROL_USE_THERM_MODE_HEAT or control_use == CONTROL_USE_THERM_MODE_OFF:
+            supported_features |= SUPPORT_THERM_MODES
+    return supported_features
+
+def build_setpoint_device(raw_data: dict, control_item: dict, request: Callable) -> HomeSeerSetPointDevice:
+    pair = get_control_pair_by_control_use(control_item, CONTROL_USE_COOL_SETPOINT)
+    if pair is None:
+        pair = get_control_pair_by_control_use(control_item, CONTROL_USE_HEAT_SETPOINT)
+    (start, end) = get_range(pair)
+    return HomeSeerSetPointDevice(raw_data, control_item, request, start, end)
+
+def build_lockable_device(raw_data: dict, control_item: dict, request: Callable) -> HomeSeerLockableDevice:
+    lock_value = get_control_value_by_control_use(control_item, CONTROL_USE_LOCK)
+    unlock_value = get_control_value_by_control_use(control_item, CONTROL_USE_UNLOCK)
+    return HomeSeerLockableDevice(raw_data, control_item, request, lock_value, unlock_value)
+
+def build_switch_device(raw_data: dict, control_item: dict, request: Callable) -> HomeSeerSwitchableDevice:
+    on_value = get_control_value_by_control_use(control_item, CONTROL_USE_ON)
+    off_value = get_control_value_by_control_use(control_item, CONTROL_USE_OFF)
+    return HomeSeerSwitchableDevice(raw_data, control_item, request, on_value, off_value)
+
+def build_dimmable_device(raw_data: dict, control_item: dict, request: Callable) -> HomeSeerDimmableDevice:
+    on_value = get_control_value_by_control_use(control_item, CONTROL_USE_ON)
+    off_value = get_control_value_by_control_use(control_item, CONTROL_USE_OFF)
+    (start_value, end_value) = get_range_for(control_item, CONTROL_USE_DIM)
+    return HomeSeerDimmableDevice(raw_data, control_item, request, on_value, off_value, start_value, end_value)
+
+def build_cover_device(raw_data: dict, control_item: dict, request: Callable) -> HomeSeerCoverDevice:
+    on_value = get_control_value_by_control_use(control_item, CONTROL_USE_ON)
+    off_value = get_control_value_by_control_use(control_item, CONTROL_USE_OFF)
+    stop_value = get_control_value_by_control_use(control_item, CONTROL_USE_STOP)
+    (start_value, end_value) = get_range_for(control_item, CONTROL_USE_DIM)
+    return HomeSeerCoverDevice(raw_data, control_item, request, on_value, off_value, stop_value, start_value, end_value)
+
+def build_fan_device(raw_data: dict, control_item: dict, request: Callable) -> HomeSeerFanDevice:
+    on_value = get_control_value_by_control_use(control_item, CONTROL_USE_ON)
+    off_value = get_control_value_by_control_use(control_item, CONTROL_USE_OFF)
+    return HomeSeerFanDevice(raw_data, control_item, request, on_value, off_value)
+
+def get_control_value_by_control_use(item: dict, control_use:int) -> Union[int,float, str, None]:
+    control_pair = get_control_pair_by_control_use(item, control_use)
+    if control_pair is not None:
+        return control_pair["ControlValue"]
+    return None
+
+def get_control_pair_by_control_use(item: dict, control_use:int) -> Union[dict, None]:
+    if item is None:
+        return None
+    control_pairs = item["ControlPairs"]
+    control_pair = next((x for x in control_pairs if x["ControlUse"] == control_use), None)
+    return control_pair
+
+def get_range_for(control_item: dict, control_use:int) -> Union[Tuple[float, float], None]:
+    pair = get_control_pair_by_control_use(control_item, control_use)
+    return get_range(pair)
+
+def get_range(control_pair:dict) -> Union[Tuple[float, float], None]:
+    if control_pair is None:
+        return (0,0)
+    the_range = control_pair["Range"]
+    start = the_range["RangeStart"]
+    end = the_range["RangeEnd"]
+    return (start, end)
+   
+def get_thermostat(thermostat: HomeSeerStatusDevice, devices: List[HomeSeerStatusDevice]) -> any:
+    children_ids = thermostat._raw_data["associated_devices"]
+    children = [dev for dev in devices if dev.ref in children_ids]
+
+    mode = next((x for x in children if x.device_type_string == "Z-Wave Mode"), [None])
+    heater = next((x for x in children if x.device_type_string == "Z-Wave Switch"), [None])
+    heating_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Heating  Setpoint"), [None])
+    cooling_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Cooling  Setpoint"), [None])
+    energy_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Energy Save Heating Setpoint"), [None])
+    air_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Thermostat Air Temperature"), [None])
+    floor_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Floor Temperature"), [None])
+
+    return None
+
+

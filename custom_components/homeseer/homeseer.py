@@ -6,6 +6,7 @@ from .libhomeseer import (
     HomeSeerLockableDevice,
     HomeSeerDimmableDevice,
     HomeSeerCoverDevice,
+    HomeSeerSetPointDevice,
     get_datetime_from_last_change,
     RELATIONSHIP_CHILD,
     RELATIONSHIP_ROOT,
@@ -199,6 +200,8 @@ class HomeSeerBridge:
             return "lock"
         elif type(device) == HomeSeerStatusDevice:
             return "sensor"
+        elif type(device) == HomeSeerSetPointDevice:
+            return "sensor"
 
         _LOGGER.debug(
             f"No valid platform detected for device ref {device.ref} (type: {type(device)})"
@@ -216,7 +219,8 @@ class HomeSeerEntity(Entity):
             HomeSeerSwitchableDevice,
             HomeSeerDimmableDevice,
             HomeSeerLockableDevice,
-            HomeSeerCoverDevice
+            HomeSeerCoverDevice,
+            HomeSeerSetPointDevice,
         ],
         bridge: HomeSeerBridge,
     ):
