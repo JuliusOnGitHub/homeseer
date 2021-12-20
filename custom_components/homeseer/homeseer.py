@@ -200,12 +200,12 @@ class HomeSeerBridge:
             return "cover"
         elif type(device) == HomeSeerLockableDevice:
             return "lock"
-        elif type(device) == HomeSeerStatusDevice:
-            return "sensor"
-        elif type(device) == HomeSeerSetPointDevice:
-            return "sensor"
         elif type(device) == HomeSeerClimateDevice:
             return "climate"
+        elif type(device) == HomeSeerSetPointDevice:
+            return "sensor"
+        elif type(device) == HomeSeerStatusDevice:
+            return "sensor"
 
         _LOGGER.debug(
             f"No valid platform detected for device ref {device.ref} (type: {type(device)})"
