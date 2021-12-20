@@ -290,13 +290,27 @@ class HomeSeerLockableDevice(HomeSeerStatusDevice):
         """Unlock the device."""
         await self.set_value(self._unlock_value)
 
-class HomeSeerClimateDevice(HomeSeerSwitchableDevice):
-    """Representation of a HomeSeer device that has Lock and Unlock control pairs."""
-
+class HomeSeerClimateDevice(HomeSeerStatusDevice):
+    """Representation of a HomeSeer thermostat."""
     def __init__(
-        self, raw_data: dict, control_data: dict, request: Callable, on_value: int, off_value: int
+        self,
+        thermo_root: HomeSeerStatusDevice, 
+        mode: HomeSeerStatusDevice, 
+        heater: HomeSeerSwitchableDevice, 
+        heating_setpoint: HomeSeerSetPointDevice, 
+        cooling_setpoint: HomeSeerSetPointDevice, 
+        temp: HomeSeerStatusDevice
     ) -> None:
-        super().__init__(raw_data, control_data, request, on_value, off_value)
+        super().__init__(thermo_root._raw_data, thermo_root._control_data, thermo_root._request)
+        self._mode = mode
+        self._heater = heater
+        self._heating_setpoint = heating_setpoint
+        self._cooling_setpoint = cooling_setpoint
+        self._temp = temp
+
+    def get_devices(self) -> List[HomeSeerStatusDevice]:
+        all_devices = [self, self._mode, self._heater, self._heating_setpoint, self._cooling_setpoint, self._temp]
+        return [x for x in all_devices if x is not None]
 
 def get_device(
     raw_data: dict, control_data: dict, request: Callable
@@ -383,9 +397,9 @@ def get_supported_features(control_item: dict) -> int:
             supported_features |= SUPPORT_DIM
         elif control_use == CONTROL_USE_FAN:
             supported_features |= SUPPORT_FAN
-        elif control_use == CONTROL_USE_COOL_SETPOINT or control_use == CONTROL_USE_HEAT_SETPOINT:
+        elif control_use in [CONTROL_USE_COOL_SETPOINT, CONTROL_USE_HEAT_SETPOINT]:
             supported_features |= SUPPORT_SETPOINT
-        elif control_use == CONTROL_USE_THERM_MODE_COOL or control_use == CONTROL_USE_THERM_MODE_HEAT or control_use == CONTROL_USE_THERM_MODE_OFF:
+        elif control_use in [CONTROL_USE_THERM_MODE_COOL, CONTROL_USE_THERM_MODE_HEAT, CONTROL_USE_THERM_MODE_OFF]:
             supported_features |= SUPPORT_THERM_MODES
     return supported_features
 
@@ -449,18 +463,19 @@ def get_range(control_pair:dict) -> Union[Tuple[float, float], None]:
     end = the_range["RangeEnd"]
     return (start, end)
    
-def get_thermostat(thermostat: HomeSeerStatusDevice, devices: List[HomeSeerStatusDevice]) -> any:
+def get_thermostat(thermostat: HomeSeerStatusDevice, devices: List[HomeSeerStatusDevice]) -> HomeSeerClimateDevice:
     children_ids = thermostat._raw_data["associated_devices"]
     children = [dev for dev in devices if dev.ref in children_ids]
 
-    mode = next((x for x in children if x.device_type_string == "Z-Wave Mode"), None)
-    heater = next((x for x in children if x.device_type_string == "Z-Wave Switch"), None)
-    heating_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Heating  Setpoint"), None)
-    cooling_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Cooling  Setpoint"), None)
-    energy_setpoint = next((x for x in children if x.device_type_string == "Z-Wave Energy Save Heating Setpoint"), None)
-    air_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Thermostat Air Temperature"), None)
-    floor_temp = next((x for x in children if x.device_type_string == "Z-Wave Temperature" and x.name == "Floor Temperature"), None)
+    mode = get_device_by_type(children, "Z-Wave Mode")
+    heater = get_device_by_type(children, "Z-Wave Switch")
+    heating_setpoint = get_device_by_type(children, "Z-Wave Heating  Setpoint")
+    cooling_setpoint = get_device_by_type(children, "Z-Wave Cooling  Setpoint")
+    #energy_setpoint = get_device_by_type(children, "Z-Wave Energy Save Heating Setpoint")
+    air_temp = get_device_by_type(children, "Z-Wave Temperature", "Thermostat Air Temperature")
+    #floor_temp = get_device_by_type(children, "Z-Wave Temperature", "Floor Temperature")
 
-    return None
+    return HomeSeerClimateDevice(thermostat, mode, heater, heating_setpoint, cooling_setpoint, air_temp)
 
-
+def get_device_by_type(devices: List[HomeSeerStatusDevice], type: str, name:str = "") -> Union[HomeSeerStatusDevice, None]:
+    return next((x for x in devices if x.device_type_string == type and (name == "" or x.name == name)), None)

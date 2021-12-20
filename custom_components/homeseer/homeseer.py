@@ -1,4 +1,5 @@
 """Provides HomeSeer specific implementations for bridges, entities, and remotes."""
+from custom_components.homeseer.libhomeseer.devices import HomeSeerClimateDevice
 from .libhomeseer import (
     HomeSeer,
     HomeSeerStatusDevice,
@@ -202,6 +203,8 @@ class HomeSeerBridge:
             return "sensor"
         elif type(device) == HomeSeerSetPointDevice:
             return "sensor"
+        elif type(device) == HomeSeerClimateDevice:
+            return "climate"
 
         _LOGGER.debug(
             f"No valid platform detected for device ref {device.ref} (type: {type(device)})"
@@ -221,6 +224,7 @@ class HomeSeerEntity(Entity):
             HomeSeerLockableDevice,
             HomeSeerCoverDevice,
             HomeSeerSetPointDevice,
+            HomeSeerClimateDevice
         ],
         bridge: HomeSeerBridge,
     ):

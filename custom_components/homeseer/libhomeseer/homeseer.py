@@ -14,6 +14,7 @@ from .const import (
     DEFAULT_USERNAME,
 )
 from .devices import (
+    HomeSeerClimateDevice,
     HomeSeerStatusDevice,
     get_device,
     get_thermostat
@@ -158,9 +159,16 @@ class HomeSeer:
             try:
                 dev = get_thermostat(thermostat, status_devices)
                 if dev is not None:
-                    self._thermostats[dev.ref] = dev
+                    self.remove_thermostat_devices(dev)
+                    self._devices[dev.ref] = dev
             except Exception as e:
                 _LOGGER.error(f"Error creating thermostat {thermostat}: {e}")
+
+    def remove_thermostat_devices(self, thermostat: HomeSeerClimateDevice) -> None:
+        for dev in thermostat.get_devices():
+            self._devices.pop(dev.ref)
+        
+
 
     async def _get_events(self) -> None:
         """Populate supported events from HomeSeer API."""
