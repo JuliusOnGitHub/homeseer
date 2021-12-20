@@ -302,6 +302,7 @@ class HomeSeerClimateDevice(HomeSeerStatusDevice):
         temp: HomeSeerStatusDevice
     ) -> None:
         super().__init__(mode._raw_data, mode._control_data, mode._request)
+        self._thermo_root = thermo_root
         self._mode = mode
         self._heater = heater
         self._heating_setpoint = heating_setpoint
@@ -309,7 +310,7 @@ class HomeSeerClimateDevice(HomeSeerStatusDevice):
         self._temp = temp
 
     def get_devices(self) -> List[HomeSeerStatusDevice]:
-        all_devices = [self, self._mode, self._heater, self._heating_setpoint, self._cooling_setpoint, self._temp]
+        all_devices = [self._thermo_root, self._mode, self._heater, self._heating_setpoint, self._cooling_setpoint, self._temp]
         return [x for x in all_devices if x is not None]
 
 def get_device(
@@ -472,10 +473,10 @@ def get_thermostat(thermostat: HomeSeerStatusDevice, devices: List[HomeSeerStatu
     heating_setpoint = get_device_by_type(children, "Z-Wave Heating  Setpoint")
     cooling_setpoint = get_device_by_type(children, "Z-Wave Cooling  Setpoint")
     #energy_setpoint = get_device_by_type(children, "Z-Wave Energy Save Heating Setpoint")
-    air_temp = get_device_by_type(children, "Z-Wave Temperature", "Thermostat Air Temperature")
+    air_temp = get_device_by_type(children, "Z-Wave Temperature", "Air")
     #floor_temp = get_device_by_type(children, "Z-Wave Temperature", "Floor Temperature")
 
     return HomeSeerClimateDevice(thermostat, mode, heater, heating_setpoint, cooling_setpoint, air_temp)
 
 def get_device_by_type(devices: List[HomeSeerStatusDevice], type: str, name:str = "") -> Union[HomeSeerStatusDevice, None]:
-    return next((x for x in devices if x.device_type_string == type and (name == "" or x.name == name)), None)
+    return next((x for x in devices if x.device_type_string == type and (name == "" or name in x.name)), None)

@@ -166,7 +166,10 @@ class HomeSeer:
 
     def remove_thermostat_devices(self, thermostat: HomeSeerClimateDevice) -> None:
         for dev in thermostat.get_devices():
-            self._devices.pop(dev.ref)
+            try:
+                self._devices.pop(dev.ref)
+            except Exception as e:
+                _LOGGER.warning(f"No able to pop {dev.ref}")
         
 
 
