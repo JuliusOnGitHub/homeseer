@@ -168,8 +168,8 @@ class HomeSeer:
         for dev in thermostat.get_devices():
             try:
                 self._devices.pop(dev.ref)
-            except Exception as e:
-                _LOGGER.warning(f"No able to pop {dev.ref}")
+            except Exception:
+                _LOGGER.warning(f"No able to pop")
         
 
 

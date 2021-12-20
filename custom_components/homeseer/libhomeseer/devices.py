@@ -301,7 +301,7 @@ class HomeSeerClimateDevice(HomeSeerStatusDevice):
         cooling_setpoint: HomeSeerSetPointDevice, 
         temp: HomeSeerStatusDevice
     ) -> None:
-        super().__init__(mode._raw_data, mode._control_data, mode._request)
+        super().__init__(thermo_root._raw_data, thermo_root._control_data, thermo_root._request)
         self._thermo_root = thermo_root
         self._mode = mode
         self._heater = heater
@@ -310,7 +310,7 @@ class HomeSeerClimateDevice(HomeSeerStatusDevice):
         self._temp = temp
 
     def get_devices(self) -> List[HomeSeerStatusDevice]:
-        all_devices = [self._mode, self._heater, self._heating_setpoint, self._cooling_setpoint, self._temp]
+        all_devices = [self._thermo_root, self._mode, self._heater, self._heating_setpoint, self._cooling_setpoint, self._temp]
         return [x for x in all_devices if x is not None]
 
 def get_device(

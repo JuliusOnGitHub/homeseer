@@ -46,7 +46,7 @@ async def main():
     print("HomeSeer Devices:")
     print("-----------------")
     for device in homeseer.devices.values():
-        if isinstance(device, libhomeseer.devices.HomeSeerCoverDevice):
+        if isinstance(device, libhomeseer.devices.HomeSeerClimateDevice):
             print(
                 f"{device.location2} {device.location} {device.name} "
                 f"(Type: {device.device_type_string}, Ref: {device.ref}) (libhomeseer type: {type(device)})"
