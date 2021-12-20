@@ -301,7 +301,7 @@ class HomeSeerClimateDevice(HomeSeerStatusDevice):
         cooling_setpoint: HomeSeerSetPointDevice, 
         temp: HomeSeerStatusDevice
     ) -> None:
-        super().__init__(thermo_root._raw_data, thermo_root._control_data, thermo_root._request)
+        super().__init__(mode._raw_data, mode._control_data, mode._request)
         self._mode = mode
         self._heater = heater
         self._heating_setpoint = heating_setpoint
