@@ -38,6 +38,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     climate_entites = []
     bridge = hass.data[DOMAIN]
 
+    _LOGGER.info("Adding HomeSeer Climate sensor")
     for device in bridge.devices["climate"]:
         entity = HomeSeerClimate(device, bridge)
         climate_entites.append(entity)

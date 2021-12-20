@@ -207,7 +207,7 @@ class HomeSeerBridge:
         elif type(device) == HomeSeerStatusDevice:
             return "sensor"
 
-        _LOGGER.debug(
+        _LOGGER.warning(
             f"No valid platform detected for device ref {device.ref} (type: {type(device)})"
         )
         return None
