@@ -35,4 +35,5 @@ HOMESEER_PLATFORMS = [
     "scene",
     "sensor",
     "switch",
+    "climate",
 ]
