@@ -45,6 +45,7 @@ DEVICES_MODEL = {
     "sensor": [],
     "scene": [],
     "switch": [],
+    "climate": [],
 }
 
 
