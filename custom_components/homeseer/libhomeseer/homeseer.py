@@ -161,6 +161,7 @@ class HomeSeer:
                 if dev is not None:
                     self.remove_thermostat_devices(dev)
                     self._devices[dev.ref] = dev
+                    _LOGGER.info(f"Created HomeSeerClimateDevice from {dev.ref}")
             except Exception as e:
                 _LOGGER.error(f"Error creating thermostat {thermostat}: {e}")
 

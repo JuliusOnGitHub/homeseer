@@ -127,5 +127,5 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
         if ATTR_TEMPERATURE in kwargs:
             if self.is_heating:
                 await self._device._heating_setpoint(kwargs.get(ATTR_TEMPERATURE))
-            else
+            else:
                 await self._device._cooling_setpoint(kwargs.get(ATTR_TEMPERATURE))
