@@ -52,6 +52,7 @@ class HomeSeer:
         )
         self._available = False
         self._devices = {}
+        self._entites = {}
         self._events = []
 
     @property
@@ -152,6 +153,7 @@ class HomeSeer:
         
 
     def find_thermostats(self) -> None:
+        self._entites = dict(self._devices)
         devices = list(self._devices.values())
         status_devices = [dev for dev in devices if isinstance(dev, HomeSeerStatusDevice)]
         thermostat_roots = [dev for dev in status_devices if dev.device_type_string == "Z-Wave Thermostat Root Device"]
@@ -193,7 +195,7 @@ class HomeSeer:
     async def _message_callback(self, device_ref: str) -> None:
         """Called by the ASCII listener when a Device Change message is received."""
         try:
-            device = self.devices[int(device_ref)]
+            entity = self._entites[int(device_ref)]
         except KeyError:
             _LOGGER.debug(
                 f"Device Change message received for unsupported or uninitialized device "
@@ -201,16 +203,16 @@ class HomeSeer:
             )
             return
 
-        params = {"request": "getstatus", "ref": device.ref}
+        params = {"request": "getstatus", "ref": entity.ref}
         _LOGGER.debug(f"Requesting updated data for device ref {device_ref}")
         try:
             result = await self._request("get", params=params)
             for raw_dev in result["Devices"]:
-                if int(raw_dev["ref"]) == device.ref:
-                    device.update_data(raw_dev)
+                if int(raw_dev["ref"]) == entity.ref:
+                    entity.update_data(raw_dev)
         except Exception as ex:
             _LOGGER.error(
-                f"Error retrieving updated data for device ref {device.ref} from {self._host}: {ex}"
+                f"Error retrieving updated data for device ref {entity.ref} from {self._host}: {ex}"
             )
 
     async def _connect_callback(self) -> None:
