@@ -175,6 +175,8 @@ class HomeSeerSetPointDevice(HomeSeerStatusDevice):
     async def set_setpoint(self, value: float) -> None:
         if self._set_min <= value and value <= self._set_max:
             await self.set_value(value)
+        else
+            _LOGGER.warning(f"Trying to set {self.ref} to {value} while range is {self._set_min} to {self._set_max}.")
 
 class HomeSeerSwitchableDevice(HomeSeerStatusDevice):
     """Representation of a HomeSeer device that has On and Off control pairs."""

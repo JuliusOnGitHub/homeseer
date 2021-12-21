@@ -92,11 +92,22 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
     @property
     def hvac_mode(self):
         if self.is_heating:
+            _LOGGER.info(f"Thermostat mode is heating.")
             return HVAC_MODE_HEAT
         if self.is_cooling:
+            _LOGGER.info(f"Thermostat mode is cool.")
             return HVAC_MODE_COOL
+        _LOGGER.info(f"Thermostat mode is off.")
         return HVAC_MODE_OFF
     
+    @property
+    def min_temp(self):
+        return 4
+        
+    @property
+    def max_temp(self):
+        return 30
+
     @property
     def is_heating(self) -> bool:
         return self._device._mode.value in [CONTROL_USE_THERM_MODE_HEAT, CONTROL_USE_NONE]
@@ -130,6 +141,7 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
         self._device._mode.set_value(mode)
     
     def convert_mode(self, hvac_mode) -> int:
+        _LOGGER.info(f"Set {self._device._mode.ref} mode to {hvac_mode}.")
         if hvac_mode == HVAC_MODE_HEAT:
             return CONTROL_USE_THERM_MODE_HEAT
         if hvac_mode == HVAC_MODE_COOL:
