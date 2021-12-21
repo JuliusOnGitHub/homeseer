@@ -159,6 +159,7 @@ class HomeSeerStatusDevice:
 
     async def set_value(self, value) -> None:
         params = self.get_params(value)
+        _LOGGER.info(f"Set device {self.ref} value to {value}.")
         await self._request("get", params=params)
 
 class HomeSeerSetPointDevice(HomeSeerStatusDevice):

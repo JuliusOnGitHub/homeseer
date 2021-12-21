@@ -17,6 +17,7 @@ from homeassistant.components.climate.const import (
     SUPPORT_SWING_MODE,
     CURRENT_HVAC_OFF,
     CURRENT_HVAC_HEAT,
+    CURRENT_HVAC_IDLE,
     SUPPORT_TARGET_TEMPERATURE,
 )
 
@@ -68,7 +69,7 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
 
     @property
     def target_temperature(self) -> float:
-        if self._device._mode.value == CONTROL_USE_THERM_MODE_COOL:
+        if self.is_cooling:
             return self.target_temperature_low
         return self.target_temperature_high
 
@@ -89,7 +90,7 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
         return 0.5
 
     @property
-    def hvac_mode(self) -> str:
+    def hvac_mode(self):
         if self.is_heating:
             return HVAC_MODE_HEAT
         if self.is_cooling:
@@ -109,10 +110,10 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
         return self._device._mode.value == CONTROL_USE_THERM_MODE_OFF
 
     @property
-    def hvac_action(self) -> str:
+    def hvac_action(self):
         if self._device._heater.is_on:
             return CURRENT_HVAC_HEAT
-        return CURRENT_HVAC_OFF
+        return CURRENT_HVAC_IDLE
 
     @property
     def hvac_modes(self):
@@ -138,8 +139,9 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
         return CONTROL_USE_THERM_MODE_OFF
 
     async def async_set_temperature(self, **kwargs):
-        if ATTR_TEMPERATURE in kwargs:
-            if self.is_heating:
-                await self._device._heating_setpoint.set_value(kwargs.get(ATTR_TEMPERATURE))
-            elif self.is_cooling:
-                await self._device._cooling_setpoint.set_value(kwargs.get(ATTR_TEMPERATURE))
+        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
+            return
+        if self.is_heating:
+            await self._device._heating_setpoint.set_value(temperature)
+        elif self.is_cooling:
+            await self._device._cooling_setpoint.set_value(temperature)
