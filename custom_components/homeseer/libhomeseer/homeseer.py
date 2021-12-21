@@ -145,7 +145,7 @@ class HomeSeer:
                 except Exception as e:
                     _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}: {e}")
 
-            self.find_thermostats()
+            #self.find_thermostats()
 
         except Exception as e:
             _LOGGER.error(f"Error retrieving HomeSeer devices from {self._host}: {e}")
