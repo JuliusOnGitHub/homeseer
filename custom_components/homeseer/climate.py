@@ -110,6 +110,7 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
 
     @property
     def is_heating(self) -> bool:
+        _LOGGER.info(f"Thermostat mode: {self._device._mode.value}")
         return self._device._mode.value in [CONTROL_USE_THERM_MODE_HEAT, CONTROL_USE_NONE]
 
     @property
@@ -122,6 +123,7 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
 
     @property
     def hvac_action(self):
+        _LOGGER.info(f"Thermostat heater: {self._device._heater.value}")
         if self._device._heater.is_on:
             return CURRENT_HVAC_HEAT
         return CURRENT_HVAC_IDLE
