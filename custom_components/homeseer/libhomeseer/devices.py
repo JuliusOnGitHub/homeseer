@@ -6,6 +6,7 @@ from typing import Callable, List, Optional, Tuple, Union
 
 from .const import RELATIONSHIP_CHILD, RELATIONSHIP_ROOT, RELATIONSHIP_STANDALONE
 
+CONTROL_USE_NONE = 0 # sometimes used as 'energy save heat'
 CONTROL_USE_ON = 1
 CONTROL_USE_OFF = 2
 CONTROL_USE_DIM = 3
@@ -473,10 +474,10 @@ def get_thermostat(thermostat: HomeSeerStatusDevice, devices: List[HomeSeerStatu
     heating_setpoint = get_device_by_type(children, "Z-Wave Heating  Setpoint")
     cooling_setpoint = get_device_by_type(children, "Z-Wave Cooling  Setpoint")
     #energy_setpoint = get_device_by_type(children, "Z-Wave Energy Save Heating Setpoint")
-    air_temp = get_device_by_type(children, "Z-Wave Temperature", "Air")
-    #floor_temp = get_device_by_type(children, "Z-Wave Temperature", "Floor Temperature")
+    #air_temp = get_device_by_type(children, "Z-Wave Temperature", "Air")
+    floor_temp = get_device_by_type(children, "Z-Wave Temperature", "Floor")
 
-    return HomeSeerClimateDevice(thermostat, mode, heater, heating_setpoint, cooling_setpoint, air_temp)
+    return HomeSeerClimateDevice(thermostat, mode, heater, heating_setpoint, cooling_setpoint, floor_temp)
 
 def get_device_by_type(devices: List[HomeSeerStatusDevice], type: str, name:str = "") -> Union[HomeSeerStatusDevice, None]:
     return next((x for x in devices if x.device_type_string == type and (name == "" or name in x.name)), None)
