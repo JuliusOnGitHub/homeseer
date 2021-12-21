@@ -102,16 +102,15 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
     
     @property
     def is_heating(self) -> bool:
-        _LOGGER.info(f"Thermostat mode: {self._device._mode.value} .. {CONTROL_USE_THERM_MODE_HEAT}")
-        return int(self._device._mode.value) in [CONTROL_USE_THERM_MODE_HEAT, CONTROL_USE_NONE]
+        return self._device._mode.is_value(CONTROL_USE_THERM_MODE_HEAT)
 
     @property
     def is_cooling(self) -> bool:
-        return int(self._device._mode.value) == CONTROL_USE_THERM_MODE_COOL
+        return self._device._mode.is_value(CONTROL_USE_THERM_MODE_COOL)
 
     @property
     def is_off(self) -> bool:
-        return int(self._device._mode.value) == CONTROL_USE_THERM_MODE_OFF
+        return self._device._mode.is_value(CONTROL_USE_THERM_MODE_OFF)
 
     @property
     def hvac_action(self):
@@ -132,7 +131,7 @@ class HomeSeerClimate(HomeSeerEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
         mode = self.convert_mode(hvac_mode)
-        self._device._mode.set_value(mode)
+        self._device._mode.set_control_use_value(mode)
     
     def convert_mode(self, hvac_mode) -> int:
         _LOGGER.info(f"Set {self._device._mode.ref} mode to {hvac_mode}.")

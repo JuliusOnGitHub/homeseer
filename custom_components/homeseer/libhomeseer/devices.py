@@ -162,6 +162,22 @@ class HomeSeerStatusDevice:
         _LOGGER.info(f"Set device {self.ref} value to {value}.")
         await self._request("get", params=params)
 
+    def is_value(self, control_use):
+        if control_use is None:
+            return False
+        mode_value = get_control_value_by_control_use(self._control_data, control_use)
+        if mode_value is None:
+            return False
+        return self.value == mode_value
+
+    async def set_control_use_value(self, control_use) -> None:
+        if control_use is None:
+            return
+        mode_value = get_control_value_by_control_use(self._control_data, control_use)
+        if mode_value is None or mode_value == self.value:
+            return
+        self.set_value(mode_value)
+
 class HomeSeerSetPointDevice(HomeSeerStatusDevice):
     """Representation of a HomeSeer device that has a set point control pairs."""
 
